@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if error_key %}
+    <div class="alert alert-danger">{{ _(error_key) }}</div>
+{% else %}
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">{{ _('uptime') }}</div>
+                <div class="display-6 fw-bold text-success">{{ "%.2f"|format(metrics.uptime_pct) }}%</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">{{ _('total_dc') }}</div>
+                <div class="display-6 fw-bold text-danger">{{ metrics.num_disconnects }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">{{ _('time_online') }}</div>
+                <div class="h5 mt-2 mb-0 fw-bold">{{ metrics.total_up_str }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">{{ _('time_offline') }}</div>
+                <div class="h5 mt-2 mb-0 fw-bold text-secondary">{{ metrics.total_down_str }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3">{{ _('failure_types') }}</h5>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ _('short_dc') }}
+                        <span class="badge bg-warning text-dark rounded-pill">{{ metrics.short_count }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ _('long_dc') }}
+                        <span class="badge bg-danger rounded-pill">{{ metrics.long_count }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3">{{ _('monitoring_period') }}</h5>
+                <p class="mb-1"><strong>{{ _('start') }}:</strong> {{ metrics.start_time }}</p>
+                <p class="mb-1"><strong>{{ _('end') }}:</strong> {{ metrics.end_time }}</p>
+                <p class="mb-0"><strong>{{ _('total_time') }}:</strong> {{ metrics.total_time_str }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white fw-bold">{{ _('daily_stats') }}</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>{{ _('date') }}</th>
+                        <th>{{ _('online') }}</th>
+                        <th>{{ _('offline') }}</th>
+                        <th>{{ _('disconnects') }}</th>
+                        <th>{{ _('uptime') }}</th>
+                        <th class="text-end">{{ _('action') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day in daily_stats %}
+                    <tr>
+                        <td>{{ day.date }}</td>
+                        <td>{{ day.up_time }}</td>
+                        <td>{{ day.down_time }}</td>
+                        <td><span class="badge bg-secondary">{{ day.dc_cnt }}</span></td>
+                        <td><strong>{{ "%.2f"|format(day.pct) }}%</strong></td>
+                        <td class="text-end">
+                            <a href="/day/{{ day.date }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                {{ _('view_logs') }}
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if long_disconnects %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white fw-bold text-danger">{{ _('long_dc_details') }}</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>{{ _('start') }}</th>
+                        <th>{{ _('end') }}</th>
+                        <th>{{ _('duration') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in long_disconnects %}
+                    <tr>
+                        <td>{{ row.start }}</td>
+                        <td>{{ row.end }}</td>
+                        <td><span class="badge bg-danger">{{ row.duration_sec }} {{ _('sec') }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

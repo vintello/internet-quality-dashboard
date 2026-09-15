@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('day_details_title') }} {{ date_str }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>{{ _('day_details_title') }} {{ date_str }}</h2>
+    <button onclick="window.close()" class="btn btn-secondary">{{ _('close_page') }}</button>
+</div>
+
+{% if error_key %}
+    <div class="alert alert-danger">{{ _(error_key) }}</div>
+{% elif events %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>{{ _('status') }}</th>
+                        <th>{{ _('start') }}</th>
+                        <th>{{ _('end') }}</th>
+                        <th>{{ _('duration') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in events %}
+                    <tr class="{{ 'table-danger' if e.status == 0 else '' }}">
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            {% if e.status == 1 %}
+                                <span class="badge bg-success">{{ _('event_online') }}</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ _('event_offline') }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ e.start }}</td>
+                        <td>{{ e.end }}</td>
+                        <td>
+                            <strong>
+                                {% if e.duration_sec >= 60 %}
+                                    {{ e.duration_sec // 3600 }}:{{ "%02d"|format((e.duration_sec % 3600) // 60) }}:{{ "%02d"|format(e.duration_sec % 60) }}
+                                {% else %}
+                                    {{ e.duration_sec }} {{ _('sec') }}
+                                {% endif %}
+                            </strong>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+    <div class="alert alert-warning">{{ _('no_logs_date') }}</div>
+{% endif %}
+{% endblock %}

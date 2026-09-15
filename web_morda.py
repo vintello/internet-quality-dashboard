@@ -1,226 +1,29 @@
 import os
 import datetime
 import pandas as pd
-from flask import Flask, render_template_string
+from flask import Flask, render_template, request, session, redirect, url_for
+from translations import TRANSLATIONS
 
 app = Flask(__name__)
+app.secret_key = 'super-secret-key-change-me'
 LOG_FILE = 'internet_history.log'
 
-INDEX_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мониторинг Интернет-Соединения</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-    <div class="container py-4">
-        <h1 class="mb-4">Дашборд качества связи</h1>
+@app.context_processor
+def inject_i18n():
+    lang = session.get('lang', 'ru')
+    def translate(key):
+        return TRANSLATIONS.get(lang, TRANSLATIONS['ru']).get(key, key)
+    return dict(_=translate, current_lang=lang)
 
-        {% if error %}
-            <div class="alert alert-danger">{{ error }}</div>
-        {% else %}
-        <!-- Карточки с ключевыми метриками -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="card text-center border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="text-muted small">Аптайм</div>
-                        <div class="display-6 fw-bold text-success">{{ "%.2f"|format(metrics.uptime_pct) }}%</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-center border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="text-muted small">Всего обрывов</div>
-                        <div class="display-6 fw-bold text-danger">{{ metrics.num_disconnects }}</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-center border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="text-muted small">Время в сети</div>
-                        <div class="h5 mt-2 mb-0 fw-bold">{{ metrics.total_up_str }}</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-center border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="text-muted small">Время без сети</div>
-                        <div class="h5 mt-2 mb-0 fw-bold text-secondary">{{ metrics.total_down_str }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row g-3 mb-4">
-            <div class="col-md-6">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3">Типы сбоев</h5>
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                Кратковременные (<= 10 сек)
-                                <span class="badge bg-warning text-dark rounded-pill">{{ metrics.short_count }}</span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                Длительные (> 10 сек)
-                                <span class="badge bg-danger rounded-pill">{{ metrics.long_count }}</span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3">Период мониторинга</h5>
-                        <p class="mb-1"><strong>Начало:</strong> {{ metrics.start_time }}</p>
-                        <p class="mb-1"><strong>Конец:</strong> {{ metrics.end_time }}</p>
-                        <p class="mb-0"><strong>Всего времени:</strong> {{ metrics.total_time_str }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Статистика по дням -->
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white font-weight-bold fw-bold">Статистика по дням</div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Дата</th>
-                                <th>В сети</th>
-                                <th>Без сети</th>
-                                <th>Обрывов</th>
-                                <th>Аптайм</th>
-                                <th class="text-end">Действие</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for day in daily_stats %}
-                            <tr>
-                                <td>{{ day.date }}</td>
-                                <td>{{ day.up_time }}</td>
-                                <td>{{ day.down_time }}</td>
-                                <td><span class="badge bg-secondary">{{ day.dc_cnt }}</span></td>
-                                <td><strong>{{ "%.2f"|format(day.pct) }}%</strong></td>
-                                <td class="text-end">
-                                    <a href="/day/{{ day.date }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                        Просмотреть логи
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Детализация длительных обрывов -->
-        {% if long_disconnects %}
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white fw-bold text-danger">Детализация длительных обрывов (> 10с)</div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Начало</th>
-                                <th>Конец</th>
-                                <th>Длительность</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in long_disconnects %}
-                            <tr>
-                                <td>{{ row.start }}</td>
-                                <td>{{ row.end }}</td>
-                                <td><span class="badge bg-danger">{{ row.duration_sec }} сек</span></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        {% endif %}
-    </div>
-</body>
-</html>
-"""
-
-DAY_DETAIL_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Логи за {{ date_str }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-    <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Детализация событий за {{ date_str }}</h2>
-            <button onclick="window.close()" class="btn btn-secondary">Закрыть страницу</button>
-        </div>
-
-        {% if events %}
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>#</th>
-                                <th>Статус</th>
-                                <th>Начало</th>
-                                <th>Конец</th>
-                                <th>Длительность</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for e in events %}
-                            <tr class="{{ 'table-danger' if e.status == 0 else '' }}">
-                                <td>{{ loop.index }}</td>
-                                <td>
-                                    {% if e.status == 1 %}
-                                        <span class="badge bg-success">В сети</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">Обрыв</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ e.start }}</td>
-                                <td>{{ e.end }}</td>
-                                <td><strong>{{ e.duration_str }}</strong></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        {% else %}
-            <div class="alert alert-warning">За выбранную дату нет записей.</div>
-        {% endif %}
-    </div>
-</body>
-</html>
-"""
+@app.route('/set_lang/<lang>')
+def set_lang(lang):
+    if lang in TRANSLATIONS:
+        session['lang'] = lang
+    return redirect(request.referrer or url_for('index'))
 
 def get_parsed_df():
     if not os.path.exists(LOG_FILE):
-        return None, "Файл логов не найден."
+        return None, 'file_not_found'
 
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         lines = [l.strip() for l in f.readlines() if l.strip()]
@@ -248,15 +51,15 @@ def get_parsed_df():
         })
 
     if not records:
-        return None, "Файл логов пуст или содержит некорректные данные."
+        return None, 'file_empty'
 
     return pd.DataFrame(records), None
 
 @app.route('/')
 def index():
-    df, error = get_parsed_df()
-    if error:
-        return render_template_string(INDEX_TEMPLATE, error=error)
+    df, error_key = get_parsed_df()
+    if error_key:
+        return render_template('index.html', error_key=error_key)
 
     start_time = df['start'].min()
     end_time = df['end'].max()
@@ -282,13 +85,14 @@ def index():
     }
 
     long_df = down_df[down_df['duration_sec'] > 10]
-    long_disconnects = []
-    for _, r in long_df.iterrows():
-        long_disconnects.append({
+    long_disconnects = [
+        {
             'start': r['start'].strftime("%Y-%m-%d %H:%M:%S"),
             'end': r['end'].strftime("%Y-%m-%d %H:%M:%S"),
             'duration_sec': int(r['duration_sec'])
-        })
+        }
+        for _, r in long_df.iterrows()
+    ]
 
     df['date'] = df['start'].dt.date
     daily_stats = []
@@ -305,19 +109,19 @@ def index():
             'pct': pct
         })
 
-    return render_template_string(
-        INDEX_TEMPLATE,
+    return render_template(
+        'index.html',
         metrics=metrics,
         long_disconnects=long_disconnects,
         daily_stats=daily_stats,
-        error=None
+        error_key=None
     )
 
 @app.route('/day/<date_str>')
 def day_detail(date_str):
-    df, error = get_parsed_df()
-    if error:
-        return f"Ошибка: {error}", 400
+    df, error_key = get_parsed_df()
+    if error_key:
+        return render_template('day_detail.html', error_key=error_key, date_str=date_str)
 
     df['date_str'] = df['start'].dt.strftime("%Y-%m-%d")
     day_df = df[df['date_str'] == date_str]
@@ -325,15 +129,15 @@ def day_detail(date_str):
     events = []
     for _, r in day_df.iterrows():
         dur = int(r['duration_sec'])
-        dur_str = str(datetime.timedelta(seconds=dur)) if dur >= 60 else f"{dur} сек"
+        #dur_str = str(datetime.timedelta(seconds=dur)) if dur >= 60 else f"{dur} " + _('sec')
         events.append({
             'status': r['status'],
             'start': r['start'].strftime("%H:%M:%S"),
             'end': r['end'].strftime("%H:%M:%S"),
-            'duration_str': dur_str
+            'duration_sec': int(r['duration_sec'])
         })
 
-    return render_template_string(DAY_DETAIL_TEMPLATE, date_str=date_str, events=events)
+    return render_template('day_detail.html', date_str=date_str, events=events)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
