@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=root
+User=vintello
 WorkingDirectory=<<host_folder>>
 ExecStart=/usr/bin/python3 <<host_folder>>/main.py
 Restart=always

@@ -33,7 +33,7 @@
 ## Быстрый старт
 1. Клонирование репозитория
     
-        git clone [https://gitlab.com/vintello/internet-quality-dashboard.git](https://gitlab.com/vintello/internet-quality-dashboard.git)
+        git clone https://github.com/vintello/internet-quality-dashboard
         cd internet-quality-dashboard
    
 2. Создание виртуального окружения
@@ -54,8 +54,24 @@
 
 4. Запуск приложения
 
-        python main.py
-        python web_morda.py
+   * Локально
+   
+       python main.py
+       python web_morda.py
+   
+   * Демонизация линукс
+   
+       sudo nano /etc/systemd/system/internet-web.service
+       sudo nano /etc/systemd/system/internet-tracker.service
+
+       sudo systemctl daemon-reload
+   
+       sudo systemctl enable internet-tracker.service
+       sudo systemctl enable internet-web.service
+   
+       sudo systemctl start internet-tracker.service
+       sudo systemctl enable internet-web.service
+   
 
 Приложение будет доступно в браузере по адресу: http://localhost:5000
 

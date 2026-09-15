@@ -1,10 +1,10 @@
 [Unit]
-Description=Internet Connection Uptime Tracker
+Description=Internet Connection Uptime Tracker Web Dashboard
 After=network.target
 
 [Service]
 Type=simple
-User=root
+User=vintello
 WorkingDirectory=<<host_folder>>
 ExecStart=/usr/bin/python3 <<host_folder>>/web_morda.py
 Restart=always
