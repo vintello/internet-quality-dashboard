@@ -33,27 +33,29 @@
 ## Быстрый старт
 1. Клонирование репозитория
     
-    git clone [https://gitlab.com/username/internet-quality-dashboard.git](https://gitlab.com/username/internet-quality-dashboard.git)
-    cd internet-quality-dashboard
+        git clone [https://gitlab.com/vintello/internet-quality-dashboard.git](https://gitlab.com/vintello/internet-quality-dashboard.git)
+        cd internet-quality-dashboard
    
 2. Создание виртуального окружения
     
    * Linux / macOS
     
-       python3 -m venv venv
-   
-       source venv/bin/activate
+            python3 -m venv venv
+            source venv/bin/activate
 
    * Windows
 
           python -m venv venv
-   venv\Scripts\activate
+          venv\Scripts\activate
+
 3. Установка зависимостей
 
         pip install -r requirements.txt
+
 4. Запуск приложения
 
-        python app.py
+        python main.py
+        python web_morda.py
 
 Приложение будет доступно в браузере по адресу: http://localhost:5000
 
