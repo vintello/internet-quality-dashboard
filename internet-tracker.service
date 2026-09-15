@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=vintello
 WorkingDirectory=<<host_folder>>
-ExecStart=/usr/bin/python3 <<host_folder>>/main.py
+ExecStart=<<host_folder>>/venv/bin/python3 <<host_folder>>/main.py
 Restart=always
 RestartSec=10
 
