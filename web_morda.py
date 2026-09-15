@@ -10,9 +10,11 @@ LOG_FILE = 'internet_history.log'
 
 @app.context_processor
 def inject_i18n():
-    lang = session.get('lang', 'ru')
+    # Меняем значение по умолчанию на 'uk'
+    lang = session.get('lang', 'uk')
     def translate(key):
-        return TRANSLATIONS.get(lang, TRANSLATIONS['ru']).get(key, key)
+        # В качестве резервного словаря (fallback) также указываем 'uk'
+        return TRANSLATIONS.get(lang, TRANSLATIONS['uk']).get(key, key)
     return dict(_=translate, current_lang=lang)
 
 @app.route('/set_lang/<lang>')
