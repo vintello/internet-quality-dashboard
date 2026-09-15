@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/vintello/HOST
-ExecStart=/usr/bin/python3 /home/vintello/HOST/inet_checker/web_morda.py
+WorkingDirectory=<<host_folder>>
+ExecStart=/usr/bin/python3 <<host_folder>>/web_morda.py
 Restart=always
 RestartSec=10
 
