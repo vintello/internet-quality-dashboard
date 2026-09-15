@@ -1,0 +1,14 @@
+[Unit]
+Description=Internet Connection Uptime Tracker
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/vintello/HOST
+ExecStart=/usr/bin/python3 /home/vintello/HOST/inet_checker/web_morda.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
